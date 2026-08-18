@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#000010">
+<title>星座观星仪 · StarGaze</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <!-- 加载页 -->
+  <div id="loading">
+    <div class="loader-star"></div>
+    <p>正在唤醒星空…</p>
+  </div>
+
+  <!-- 地球页 -->
+  <div id="earth-view">
+    <canvas id="earth-canvas"></canvas>
+    <div id="earth-info">
+      <div class="title">你 的 位 置</div>
+      <div class="loc" id="loc-name">定位中…</div>
+      <div class="coords" id="loc-coords"></div>
+    </div>
+    <button id="start-btn">仰望星空</button>
+    <div id="earth-hint">旋转地球查看你的位置 · 点击按钮开始观星</div>
+  </div>
+
+  <!-- 天空页 -->
+  <div id="sky-view">
+    <video id="camera-video" autoplay playsinline muted></video>
+    <canvas id="sky-canvas"></canvas>
+
+    <div id="constellation-info">
+      <div class="cn-name" id="const-cn">—</div>
+      <div class="latin-name" id="const-latin">—</div>
+      <div class="sub" id="const-sub"></div>
+    </div>
+
+    <div id="orient-indicator"></div>
+
+    <div id="horizon-warning">
+      <div class="icon">🔭</div>
+      <div class="text">请朝向天空</div>
+      <div class="sub">将手机向上抬起仰望夜空</div>
+    </div>
+
+    <div id="desktop-hint">
+      <div class="icon">📱</div>
+      <div class="text">请在手机上访问以体验完整功能<br/>桌面端可用鼠标拖动模拟观星</div>
+      <div class="small">点击下方"了解"查看星座资料</div>
+    </div>
+
+    <div id="controls">
+      <div class="ctrl-group">
+        <button class="ctrl-btn" id="learn-btn" title="了解星座">
+          <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-6h2v6zm0-8h-2V7h2v4z"/></svg>
+          <span class="label">了解</span>
+        </button>
+        <button class="ctrl-btn" id="photo-btn" title="拍照">
+          <svg viewBox="0 0 24 24"><path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/></svg>
+          <span class="label">拍照</span>
+        </button>
+      </div>
+      <div class="ctrl-group">
+        <button class="ctrl-btn" id="back-btn" title="返回地球">
+          <svg viewBox="0 0 24 24"><path d="M3 12l5 5v-3h6v-4H8V7z"/></svg>
+          <span class="label">地球</span>
+        </button>
+      </div>
+    </div>
+
+    <div id="flash"></div>
+    <div id="toast"></div>
+  </div>
+
+  <!-- 了解面板(磁贴) -->
+  <div id="learn-panel">
+    <div id="learn-sheet">
+      <div id="learn-handle"></div>
+      <div id="learn-header">
+        <div class="title" id="learn-title">星座详情</div>
+        <div class="sub" id="learn-sub">来自权威天文资料</div>
+        <button id="learn-close">×</button>
+      </div>
+      <div id="learn-scroll">
+        <div class="learn-loading"><div class="spin"></div>正在从天文资料库抓取…</div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+<script src="https://unpkg.com/astronomy-engine@2.1.19/astronomy.browser.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

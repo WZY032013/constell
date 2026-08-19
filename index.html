@@ -5,7 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#000010">
 <title>星座观星仪 · StarGaze</title>
+<link rel="preload" as="style" href="style.css">
 <link rel="stylesheet" href="style.css">
+<link rel="preconnect" href="cdn.jsdelivr.net" crossorigin>
+<link rel="preconnect" href="unpkg.com" crossorigin>
+<link rel="preconnect" href://threejs.org crossorigin>
 </head>
 <body>
 <div id="app">
@@ -27,9 +31,12 @@
     <div id="earth-hint">旋转地球查看你的位置 · 点击按钮开始观星</div>
   </div>
 
+  <!-- 过渡动画层 -->
+  <div id="transition-overlay"><div class="trans-text">正在仰望星空…</div></div>
+
   <!-- 天空页 -->
   <div id="sky-view">
-    <video id="camera-video" autoplay playsinline muted></video>
+    <div id="sky-bg"></div>
     <canvas id="sky-canvas"></canvas>
 
     <div id="constellation-info">
@@ -58,10 +65,6 @@
           <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-6h2v6zm0-8h-2V7h2v4z"/></svg>
           <span class="label">了解</span>
         </button>
-        <button class="ctrl-btn" id="photo-btn" title="拍照">
-          <svg viewBox="0 0 24 24"><path d="M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z"/></svg>
-          <span class="label">拍照</span>
-        </button>
       </div>
       <div class="ctrl-group">
         <button class="ctrl-btn" id="back-btn" title="返回地球">
@@ -71,7 +74,6 @@
       </div>
     </div>
 
-    <div id="flash"></div>
     <div id="toast"></div>
   </div>
 
@@ -92,8 +94,8 @@
 
 </div>
 
-<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
-<script src="https://unpkg.com/astronomy-engine@2.1.19/astronomy.browser.min.js"></script>
-<script src="app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/astronomy-engine@2.1.19/astronomy.browser.min.js" defer></script>
+<script src="app.js" defer></script>
 </body>
 </html>

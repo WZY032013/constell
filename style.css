@@ -1,94 +1,399 @@
-* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-html,body { width:100%; height:100%; overflow:hidden; background:#000; font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif; color:#fff; user-select:none; -webkit-user-select:none; }
-#app { position:relative; width:100vw; height:100vh; overflow:hidden; }
+/* ============================================================
+ * StarGaze · iOS 26 Liquid Glass 液态玻璃质感
+ * ============================================================ */
+
+:root {
+  --glass-bg: rgba(255, 255, 255, 0.08);
+  --glass-bg-strong: rgba(255, 255, 255, 0.12);
+  --glass-border: rgba(255, 255, 255, 0.22);
+  --glass-highlight: rgba(255, 255, 255, 0.55);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.35), 0 2px 8px rgba(0, 0, 0, 0.2);
+  --glass-blur: 24px;
+  --glass-saturate: 180%;
+  --accent: #6ab7ff;
+  --accent-glow: rgba(106, 183, 255, 0.5);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  width: 100%; height: 100%; overflow: hidden; background: #000;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", "Microsoft YaHei", sans-serif;
+  color: #fff; user-select: none; -webkit-user-select: none;
+}
+
+#app { position: relative; width: 100vw; height: 100vh; overflow: hidden; }
+
+/* ============ 液态玻璃基础类 ============ */
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  border: 1px solid var(--glass-border);
+  box-shadow:
+    var(--glass-shadow),
+    inset 0 1px 1px 0 var(--glass-highlight),
+    inset 0 -1px 1px 0 rgba(0, 0, 0, 0.15);
+  position: relative;
+}
+/* 液态玻璃边缘高光(伪元素模拟折射光) */
+.glass::before {
+  content: ""; position: absolute; inset: 0; border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg,
+    rgba(255, 255, 255, 0.6) 0%,
+    rgba(255, 255, 255, 0.05) 40%,
+    rgba(255, 255, 255, 0) 60%,
+    rgba(255, 255, 255, 0.15) 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+  pointer-events: none;
+}
 
 /* ============ 加载页 ============ */
-#loading { position:absolute; inset:0; z-index:100; background:radial-gradient(ellipse at center,#0a0a2a 0%,#000 70%); display:flex; flex-direction:column; align-items:center; justify-content:center; transition:opacity .8s ease; }
-#loading.hide { opacity:0; pointer-events:none; }
-.loader-star { width:60px; height:60px; border-radius:50%; background:radial-gradient(circle,#fff 0%,#aaf 40%,transparent 70%); box-shadow:0 0 40px #6af,0 0 80px #4af; animation:pulse 1.6s ease-in-out infinite; }
-@keyframes pulse { 0%,100%{transform:scale(.8);opacity:.7} 50%{transform:scale(1.2);opacity:1} }
-#loading p { margin-top:24px; font-size:14px; color:#8af; letter-spacing:2px; }
+#loading {
+  position: absolute; inset: 0; z-index: 100;
+  background: radial-gradient(ellipse at center, #0a0a2a 0%, #000 70%);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  transition: opacity .8s ease;
+}
+#loading.hide { opacity: 0; pointer-events: none; }
+.loader-star {
+  width: 60px; height: 60px; border-radius: 50%;
+  background: radial-gradient(circle, #fff 0%, #aaf 40%, transparent 70%);
+  box-shadow: 0 0 40px #6af, 0 0 80px #4af;
+  animation: pulse 1.6s ease-in-out infinite;
+}
+@keyframes pulse { 0%, 100% { transform: scale(.8); opacity: .7 } 50% { transform: scale(1.2); opacity: 1 } }
+#loading p { margin-top: 24px; font-size: 14px; color: #8af; letter-spacing: 2px; }
 
 /* ============ 地球页 ============ */
-#earth-view { position:absolute; inset:0; z-index:50; background:radial-gradient(ellipse at center,#020822 0%,#000 80%); display:none; flex-direction:column; }
-#earth-view.show { display:flex; }
-#earth-canvas { position:absolute; inset:0; width:100%; height:100%; }
-#earth-info { position:absolute; top:calc(env(safe-area-inset-top) + 20px); left:20px; right:20px; text-align:center; z-index:2; pointer-events:none; }
-#earth-info .title { font-size:13px; color:#6af; letter-spacing:6px; margin-bottom:8px; }
-#earth-info .loc { font-size:18px; font-weight:600; color:#fff; text-shadow:0 0 12px #06f; }
-#earth-info .coords { font-size:12px; color:#7af; margin-top:6px; font-family:monospace; }
-#start-btn { position:absolute; bottom:calc(env(safe-area-inset-bottom) + 50px); left:50%; transform:translateX(-50%); z-index:3; padding:16px 42px; border:none; border-radius:40px; background:linear-gradient(135deg,#1a4fa0,#0a2a60); color:#fff; font-size:16px; font-weight:600; letter-spacing:3px; cursor:pointer; box-shadow:0 0 30px rgba(50,120,255,.6); transition:transform .2s; }
-#start-btn:active { transform:translateX(-50%) scale(.95); }
-#earth-hint { position:absolute; bottom:calc(env(safe-area-inset-bottom) + 16px); left:0; right:0; text-align:center; font-size:11px; color:#579; }
+#earth-view {
+  position: absolute; inset: 0; z-index: 50;
+  background: radial-gradient(ellipse at center, #020822 0%, #000 80%);
+  display: none; flex-direction: column;
+}
+#earth-view.show { display: flex; }
+#earth-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+#earth-info {
+  position: absolute; top: calc(env(safe-area-inset-top) + 20px); left: 50%; transform: translateX(-50%);
+  z-index: 2; pointer-events: none; text-align: center;
+  padding: 14px 28px; border-radius: 24px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow), inset 0 1px 1px 0 var(--glass-highlight);
+}
+#earth-info .title { font-size: 11px; color: rgba(170, 210, 255, 0.85); letter-spacing: 6px; margin-bottom: 6px; text-transform: uppercase; }
+#earth-info .loc { font-size: 18px; font-weight: 600; color: #fff; text-shadow: 0 0 12px rgba(106, 183, 255, 0.6); }
+#earth-info .coords { font-size: 11px; color: rgba(170, 210, 255, 0.7); margin-top: 4px; font-family: -apple-system, monospace; }
+
+#start-btn {
+  position: absolute; bottom: calc(env(safe-area-inset-bottom) + 50px); left: 50%; transform: translateX(-50%);
+  z-index: 3; padding: 16px 48px; border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 40px;
+  background: rgba(106, 183, 255, 0.18);
+  backdrop-filter: blur(30px) saturate(200%);
+  -webkit-backdrop-filter: blur(30px) saturate(200%);
+  color: #fff; font-size: 16px; font-weight: 600; letter-spacing: 4px; cursor: pointer;
+  box-shadow:
+    0 8px 32px rgba(0, 40, 100, 0.4),
+    0 0 40px var(--accent-glow),
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.6),
+    inset 0 -1px 1px 0 rgba(0, 0, 0, 0.2);
+  transition: transform .25s cubic-bezier(.32, .72, 0, 1), box-shadow .25s;
+}
+#start-btn:active { transform: translateX(-50%) scale(.95); box-shadow: 0 4px 16px rgba(0, 40, 100, 0.4), inset 0 1px 1px 0 rgba(255, 255, 255, 0.6); }
+
+#earth-hint {
+  position: absolute; bottom: calc(env(safe-area-inset-bottom) + 16px); left: 50%; transform: translateX(-50%);
+  text-align: center; font-size: 11px; color: rgba(120, 160, 200, 0.6); letter-spacing: 1px;
+  padding: 6px 16px; border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* ============ 过渡动画层 ============ */
+#transition-overlay {
+  position: absolute; inset: 0; z-index: 60;
+  background: radial-gradient(circle at 50% 35%, #0c1e3e 0%, #050d1f 45%, #000208 100%);
+  opacity: 0; pointer-events: none;
+  transition: opacity .65s ease;
+  display: flex; align-items: center; justify-content: center;
+}
+#transition-overlay.active { opacity: 1; pointer-events: all; }
+#transition-overlay .trans-text {
+  font-size: 14px; letter-spacing: 6px; color: rgba(170, 210, 255, 0.9);
+  text-shadow: 0 0 18px rgba(106, 183, 255, 0.8);
+  animation: transPulse 1.6s ease-in-out infinite;
+}
+@keyframes transPulse { 0%,100% { opacity: .5 } 50% { opacity: 1 } }
+#transition-overlay::after {
+  content: ""; position: absolute; top: 0; left: 0; width: 2px; height: 2px; border-radius: 50%;
+  background: #fff;
+  box-shadow:
+    12vw 18vh 0 0 rgba(255,255,255,.9), 28vw 8vh 0 0 rgba(200,220,255,.7),
+    45vw 22vh 0 1px rgba(255,255,255,.8), 63vw 12vh 0 0 rgba(180,210,255,.6),
+    78vw 25vh 0 0 rgba(255,255,255,.9), 88vw 9vh 0 1px rgba(220,230,255,.7),
+    8vw 42vh 0 0 rgba(255,255,255,.6), 22vw 55vh 0 1px rgba(200,220,255,.8),
+    38vw 48vh 0 0 rgba(255,255,255,.7), 55vw 60vh 0 0 rgba(180,210,255,.9),
+    70vw 45vh 0 1px rgba(255,255,255,.6), 85vw 58vh 0 0 rgba(220,230,255,.8),
+    15vw 72vh 0 0 rgba(255,255,255,.8), 33vw 80vh 0 1px rgba(200,220,255,.6),
+    50vw 75vh 0 0 rgba(255,255,255,.9), 68vw 82vh 0 0 rgba(180,210,255,.7),
+    82vw 70vh 0 1px rgba(255,255,255,.6), 92vw 40vh 0 0 rgba(220,230,255,.9),
+    5vw 90vh 0 0 rgba(255,255,255,.7), 60vw 32vh 0 0 rgba(200,220,255,.8);
+  animation: twinkle 1.4s ease-in-out infinite alternate;
+}
+@keyframes twinkle { from { opacity: .4 } to { opacity: 1 } }
 
 /* ============ 天空页 ============ */
-#sky-view { position:absolute; inset:0; z-index:10; display:none; background:#000; }
-#sky-view.show { display:block; }
-#camera-video { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:1; }
-#sky-canvas { position:absolute; inset:0; width:100%; height:100%; z-index:2; }
+#sky-view { position: absolute; inset: 0; z-index: 10; display: none; background: #000; }
+#sky-view.show { display: block; animation: skyFadeIn .8s ease; }
+@keyframes skyFadeIn { from { opacity: 0; transform: scale(1.04); } to { opacity: 1; transform: scale(1); } }
+/* 夜空背景(替代摄像头) */
+#sky-bg {
+  position: absolute; inset: 0; z-index: 0;
+  background:
+    radial-gradient(ellipse at 30% 20%, rgba(20, 40, 80, 0.35) 0%, transparent 50%),
+    radial-gradient(ellipse at 70% 60%, rgba(15, 25, 60, 0.3) 0%, transparent 50%),
+    radial-gradient(ellipse at 50% 100%, #0a1428 0%, #050a18 40%, #010409 100%);
+}
+#sky-canvas { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 2; }
 
-#constellation-info { position:absolute; top:calc(env(safe-area-inset-top) + 16px); left:50%; transform:translateX(-50%); z-index:5; text-align:center; pointer-events:none; opacity:0; transition:opacity .5s; max-width:90%; }
-#constellation-info.show { opacity:1; }
-#constellation-info .cn-name { font-size:28px; font-weight:700; letter-spacing:6px; text-shadow:0 0 20px #0af,0 2px 6px #000; }
-#constellation-info .latin-name { font-size:13px; color:#7cf; letter-spacing:3px; margin-top:4px; text-shadow:0 0 8px #000; }
-#constellation-info .sub { font-size:11px; color:#9bd; margin-top:6px; font-family:monospace; }
+/* 当前星座信息(液态玻璃胶囊) */
+#constellation-info {
+  position: absolute; top: calc(env(safe-area-inset-top) + 16px); left: 50%; transform: translateX(-50%);
+  z-index: 5; text-align: center; pointer-events: none; opacity: 0; transition: opacity .5s, transform .5s;
+  max-width: 90%; padding: 14px 28px; border-radius: 26px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow), inset 0 1px 1px 0 var(--glass-highlight);
+}
+#constellation-info.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+#constellation-info .cn-name {
+  font-size: 26px; font-weight: 700; letter-spacing: 8px;
+  background: linear-gradient(180deg, #fff 0%, #c8e0ff 100%);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 16px rgba(106, 183, 255, 0.7));
+}
+#constellation-info .latin-name { font-size: 12px; color: rgba(180, 215, 255, 0.85); letter-spacing: 4px; margin-top: 4px; }
+#constellation-info .sub { font-size: 10px; color: rgba(180, 215, 255, 0.6); margin-top: 4px; font-family: -apple-system, monospace; }
 
-#horizon-warning { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); z-index:6; text-align:center; display:none; }
-#horizon-warning.show { display:block; }
-#horizon-warning .icon { font-size:64px; animation:bob 2s ease-in-out infinite; }
-@keyframes bob { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
-#horizon-warning .text { font-size:18px; color:#fff; margin-top:16px; letter-spacing:4px; text-shadow:0 0 16px #06f; }
-#horizon-warning .sub { font-size:12px; color:#7af; margin-top:8px; }
+/* 朝向指示器(液态玻璃小药丸) */
+#orient-indicator {
+  position: absolute; top: calc(env(safe-area-inset-top) + 110px); left: 50%; transform: translateX(-50%);
+  z-index: 5; font-size: 11px; color: rgba(180, 215, 255, 0.85); font-family: -apple-system, monospace;
+  text-align: center; pointer-events: none; text-shadow: 0 0 6px rgba(0, 0, 0, 0.6);
+  padding: 6px 14px; border-radius: 14px;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.3);
+}
 
-#controls { position:absolute; bottom:calc(env(safe-area-inset-bottom) + 20px); left:20px; right:20px; z-index:6; display:flex; justify-content:space-between; align-items:flex-end; pointer-events:none; }
-.ctrl-group { display:flex; gap:14px; pointer-events:auto; }
-.ctrl-btn { width:58px; height:58px; border-radius:50%; border:1.5px solid rgba(120,180,255,.4); background:rgba(10,20,50,.55); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); color:#cdf; font-size:22px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:transform .15s,background .2s,border-color .2s; position:relative; }
-.ctrl-btn:active { transform:scale(.9); }
-.ctrl-btn:hover { background:rgba(30,60,120,.65); border-color:rgba(150,200,255,.7); }
-.ctrl-btn .label { position:absolute; bottom:-18px; left:50%; transform:translateX(-50%); font-size:10px; color:#7af; white-space:nowrap; letter-spacing:1px; }
-.ctrl-btn svg { width:24px; height:24px; fill:#cdf; }
+/* 地平线警告 */
+#horizon-warning {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  z-index: 6; text-align: center; display: none;
+  padding: 32px 40px; border-radius: 32px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(30px) saturate(180%);
+  -webkit-backdrop-filter: blur(30px) saturate(180%);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow), inset 0 1px 1px 0 var(--glass-highlight);
+}
+#horizon-warning.show { display: block; animation: glassFadeIn .5s ease; }
+@keyframes glassFadeIn { from { opacity: 0; transform: translate(-50%, -50%) scale(.92); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+#horizon-warning .icon { font-size: 56px; animation: bob 2s ease-in-out infinite; filter: drop-shadow(0 0 16px rgba(106, 183, 255, 0.5)); }
+@keyframes bob { 0%, 100% { transform: translateY(0) } 50% { transform: translateY(-10px) } }
+#horizon-warning .text { font-size: 17px; color: #fff; margin-top: 14px; letter-spacing: 4px; text-shadow: 0 0 12px rgba(106, 183, 255, 0.5); }
+#horizon-warning .sub { font-size: 11px; color: rgba(180, 215, 255, 0.7); margin-top: 6px; letter-spacing: 1px; }
 
-#orient-indicator { position:absolute; top:calc(env(safe-area-inset-top) + 80px); left:50%; transform:translateX(-50%); z-index:5; font-size:11px; color:#6af; font-family:monospace; text-align:center; pointer-events:none; text-shadow:0 0 6px #000; }
+/* 桌面端提示 */
+#desktop-hint {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  z-index: 7; text-align: center; display: none; padding: 28px 36px; max-width: 320px;
+  border-radius: 28px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(30px) saturate(180%);
+  -webkit-backdrop-filter: blur(30px) saturate(180%);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow), inset 0 1px 1px 0 var(--glass-highlight);
+}
+#desktop-hint.show { display: block; }
+#desktop-hint .icon { font-size: 44px; filter: drop-shadow(0 0 12px rgba(106, 183, 255, 0.4)); }
+#desktop-hint .text { font-size: 14px; color: rgba(220, 235, 255, 0.95); margin-top: 14px; line-height: 1.8; }
+#desktop-hint .small { font-size: 11px; color: rgba(180, 215, 255, 0.7); margin-top: 10px; }
 
-#flash { position:absolute; inset:0; background:#fff; z-index:20; opacity:0; pointer-events:none; }
-#flash.flash { animation:flash .4s ease-out; }
-@keyframes flash { 0%{opacity:0} 20%{opacity:.9} 100%{opacity:0} }
+/* ============ 控制按钮(液态玻璃圆形) ============ */
+#controls {
+  position: absolute; bottom: calc(env(safe-area-inset-bottom) + 24px); left: 24px; right: 24px;
+  z-index: 6; display: flex; justify-content: space-between; align-items: flex-end; pointer-events: none;
+}
+.ctrl-group { display: flex; gap: 14px; pointer-events: auto; }
 
-#toast { position:absolute; bottom:calc(env(safe-area-inset-bottom) + 100px); left:50%; transform:translateX(-50%); z-index:30; padding:10px 20px; background:rgba(0,30,60,.85); border:1px solid rgba(120,180,255,.4); border-radius:20px; font-size:13px; color:#cdf; opacity:0; transition:opacity .3s; pointer-events:none; backdrop-filter:blur(10px); }
-#toast.show { opacity:1; }
+.ctrl-btn {
+  width: 60px; height: 60px; border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  color: #fff; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: transform .2s cubic-bezier(.32, .72, 0, 1), background .25s, box-shadow .25s;
+  position: relative;
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.3),
+    0 2px 8px rgba(0, 0, 0, 0.15),
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.55),
+    inset 0 -1px 1px 0 rgba(0, 0, 0, 0.15);
+}
+.ctrl-btn::before {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0.05) 40%, rgba(255, 255, 255, 0) 60%, rgba(255, 255, 255, 0.15) 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+}
+.ctrl-btn:active { transform: scale(.9); }
+.ctrl-btn:hover {
+  background: rgba(106, 183, 255, 0.18);
+  box-shadow:
+    0 12px 32px rgba(0, 40, 100, 0.4),
+    0 0 30px var(--accent-glow),
+    inset 0 1px 1px 0 rgba(255, 255, 255, 0.6);
+}
+.ctrl-btn .label {
+  position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%);
+  font-size: 10px; color: rgba(180, 215, 255, 0.8); white-space: nowrap; letter-spacing: 1.5px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+.ctrl-btn svg { width: 24px; height: 24px; fill: #fff; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3)); }
 
-/* ============ 了解面板(磁贴) ============ */
-#learn-panel { position:absolute; inset:0; z-index:40; background:rgba(0,2,12,.4); backdrop-filter:blur(6px); -webkit-backdrop-filter:blur(6px); display:none; opacity:0; transition:opacity .35s; }
-#learn-panel.show { display:block; opacity:1; }
-#learn-sheet { position:absolute; bottom:0; left:0; right:0; height:88%; background:linear-gradient(180deg,#0a1428 0%,#050a18 100%); border-radius:28px 28px 0 0; border-top:1px solid rgba(120,180,255,.3); transform:translateY(100%); transition:transform .4s cubic-bezier(.32,.72,0,1); overflow:hidden; display:flex; flex-direction:column; box-shadow:0 -10px 50px rgba(0,40,100,.5); }
-#learn-panel.show #learn-sheet { transform:translateY(0); }
-#learn-handle { width:40px; height:4px; background:rgba(150,200,255,.4); border-radius:2px; margin:12px auto 6px; flex-shrink:0; }
-#learn-header { padding:6px 24px 14px; flex-shrink:0; border-bottom:1px solid rgba(80,140,200,.2); position:relative; }
-#learn-header .title { font-size:22px; font-weight:700; letter-spacing:3px; padding-right:40px; }
-#learn-header .sub { font-size:12px; color:#6af; margin-top:4px; letter-spacing:2px; }
-#learn-close { position:absolute; top:14px; right:18px; width:32px; height:32px; border-radius:50%; background:rgba(120,180,255,.15); border:none; color:#cdf; font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center; }
-#learn-scroll { flex:1; overflow-y:auto; overflow-x:hidden; padding:16px; -webkit-overflow-scrolling:touch; }
-#learn-scroll::-webkit-scrollbar { width:4px; }
-#learn-scroll::-webkit-scrollbar-thumb { background:rgba(120,180,255,.3); border-radius:2px; }
+/* Toast 提示(液态玻璃胶囊) */
+#toast {
+  position: absolute; bottom: calc(env(safe-area-inset-bottom) + 110px); left: 50%; transform: translateX(-50%);
+  z-index: 30; padding: 12px 24px; border-radius: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(30px) saturate(180%);
+  -webkit-backdrop-filter: blur(30px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: var(--glass-shadow), inset 0 1px 1px 0 var(--glass-highlight);
+  font-size: 13px; color: #fff; opacity: 0; transition: opacity .3s, transform .3s; pointer-events: none;
+}
+#toast.show { opacity: 1; }
 
-.tile { background:rgba(15,30,60,.6); border:1px solid rgba(80,140,200,.25); border-radius:16px; margin-bottom:14px; overflow:hidden; transition:transform .2s; }
-.tile:active { transform:scale(.98); }
-.tile-img-wrap { width:100%; aspect-ratio:16/10; background:#000; overflow:hidden; position:relative; }
-.tile-img-wrap img { width:100%; height:100%; object-fit:cover; display:block; }
-.tile-img-wrap .img-source { position:absolute; bottom:6px; right:8px; font-size:9px; color:rgba(200,220,255,.7); background:rgba(0,0,0,.5); padding:2px 6px; border-radius:3px; }
-.tile-body { padding:14px 16px; }
-.tile-body h3 { font-size:15px; color:#cdf; margin-bottom:8px; letter-spacing:1px; }
-.tile-body p { font-size:13px; line-height:1.7; color:#9bd; }
-.tile-body .meta { font-size:11px; color:#579; margin-top:8px; }
+/* ============ 了解面板(液态玻璃大面板) ============ */
+#learn-panel {
+  position: absolute; inset: 0; z-index: 40;
+  background: rgba(0, 2, 12, 0.35);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  display: none; opacity: 0; transition: opacity .35s;
+}
+#learn-panel.show { display: block; opacity: 1; }
+#learn-sheet {
+  position: absolute; bottom: 0; left: 0; right: 0; height: 88%;
+  background: rgba(10, 18, 36, 0.72);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  border-radius: 32px 32px 0 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.18);
+  transform: translateY(100%); transition: transform .45s cubic-bezier(.32, .72, 0, 1);
+  overflow: hidden; display: flex; flex-direction: column;
+  box-shadow: 0 -16px 60px rgba(0, 40, 100, 0.5), inset 0 1px 1px 0 rgba(255, 255, 255, 0.4);
+}
+#learn-panel.show #learn-sheet { transform: translateY(0); }
 
-.learn-loading { text-align:center; padding:60px 20px; color:#579; font-size:13px; }
-.learn-loading .spin { width:32px; height:32px; border:2px solid rgba(120,180,255,.2); border-top-color:#6af; border-radius:50%; animation:spin .8s linear infinite; margin:0 auto 16px; }
-@keyframes spin { to { transform:rotate(360deg) } }
+#learn-handle {
+  width: 40px; height: 5px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0.2));
+  border-radius: 3px; margin: 14px auto 8px; flex-shrink: 0;
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.5);
+}
 
-#desktop-hint { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); z-index:7; text-align:center; display:none; padding:20px; max-width:320px; }
-#desktop-hint.show { display:block; }
-#desktop-hint .icon { font-size:48px; }
-#desktop-hint .text { font-size:14px; color:#cdf; margin-top:14px; line-height:1.8; }
-#desktop-hint .small { font-size:11px; color:#6af; margin-top:10px; }
+#learn-header {
+  padding: 8px 24px 16px; flex-shrink: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  position: relative;
+}
+#learn-header .title {
+  font-size: 22px; font-weight: 700; letter-spacing: 3px; padding-right: 44px;
+  background: linear-gradient(180deg, #fff 0%, #c8e0ff 100%);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+}
+#learn-header .sub { font-size: 12px; color: rgba(180, 215, 255, 0.75); margin-top: 4px; letter-spacing: 2px; }
 
-a { color:#7cf; text-decoration:none; }
+#learn-close {
+  position: absolute; top: 14px; right: 18px; width: 32px; height: 32px; border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff; font-size: 18px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.4);
+  transition: transform .2s, background .2s;
+}
+#learn-close:active { transform: scale(.9); }
+#learn-close:hover { background: rgba(255, 100, 100, 0.25); }
+
+#learn-scroll {
+  flex: 1; overflow-y: auto; overflow-x: hidden; padding: 16px;
+  -webkit-overflow-scrolling: touch;
+}
+#learn-scroll::-webkit-scrollbar { width: 4px; }
+#learn-scroll::-webkit-scrollbar-thumb { background: rgba(180, 215, 255, 0.3); border-radius: 2px; }
+
+/* 磁贴(液态玻璃卡片) */
+.tile {
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 20px; margin-bottom: 14px; overflow: hidden;
+  transition: transform .2s;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2), inset 0 1px 1px 0 rgba(255, 255, 255, 0.3);
+  position: relative;
+}
+.tile::before {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.05) 40%, rgba(255, 255, 255, 0) 60%, rgba(255, 255, 255, 0.1) 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+}
+.tile:active { transform: scale(.98); }
+
+.tile-img-wrap { width: 100%; aspect-ratio: 16 / 10; background: #000; overflow: hidden; position: relative; }
+.tile-img-wrap img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.tile-img-wrap .img-source {
+  position: absolute; bottom: 8px; right: 10px; font-size: 9px;
+  color: rgba(220, 235, 255, 0.85);
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  padding: 3px 8px; border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  letter-spacing: 1px;
+}
+
+.tile-body { padding: 16px 18px; }
+.tile-body h3 { font-size: 15px; color: #fff; margin-bottom: 8px; letter-spacing: 1px; }
+.tile-body p { font-size: 13px; line-height: 1.75; color: rgba(200, 220, 255, 0.85); }
+.tile-body .meta { font-size: 11px; color: rgba(140, 180, 220, 0.7); margin-top: 10px; letter-spacing: 0.5px; }
+
+.learn-loading { text-align: center; padding: 60px 20px; color: rgba(140, 180, 220, 0.7); font-size: 13px; }
+.learn-loading .spin {
+  width: 32px; height: 32px;
+  border: 2px solid rgba(180, 215, 255, 0.15);
+  border-top-color: var(--accent);
+  border-radius: 50%; animation: spin .8s linear infinite; margin: 0 auto 16px;
+  filter: drop-shadow(0 0 8px var(--accent-glow));
+}
+@keyframes spin { to { transform: rotate(360deg) } }
+
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-shadow: 0 0 8px var(--accent-glow); }

@@ -182,23 +182,28 @@ function getLocation() {
     }
     let done = false;
     const finish = (loc) => { if (!done) { done = true; resolve(loc); } };
-    // 先快速返回缓存位置(若有),再后台用 GPS 精化
+    // GPS/浏览器定位成功回调:即使已提前 resolve,也用更准的结果刷新位置
+    const onGeoSuccess = (pos) => {
+      const loc = { lat: pos.coords.latitude, lon: pos.coords.longitude, accuracy: pos.coords.accuracy, source: 'GPS' };
+      saveLocCache(loc);
+      finish(loc);
+      // 若之前已用缓存/IP 提前返回,这里补刷 UI 与地球朝向
+      State.lat = loc.lat; State.lon = loc.lon;
+      if (typeof updateLocUI === 'function') updateLocUI(loc);
+      if (typeof rotateEarthTo === 'function') rotateEarthTo(loc.lat, loc.lon);
+      startWatch(loc);
+    };
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const loc = { lat: pos.coords.latitude, lon: pos.coords.longitude, accuracy: pos.coords.accuracy, source: 'GPS' };
-        saveLocCache(loc); finish(loc);
-        // 持续监听,逐步提高精度
-        startWatch(loc);
-      },
+      onGeoSuccess,
       async () => {
         // GPS失败 → 缓存 → IP → 默认
         const c = loadLocCache();
         if (c) { finish({ lat: c.lat, lon: c.lon, accuracy: null, source: 'cache' }); return; }
         ipLocate(finish);
       },
-      { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
     );
-    // 2秒内没拿到GPS就先给缓存/IP,避免界面卡住
+    // 2秒内没拿到定位就先给缓存/IP,避免界面卡住;GPS 稍后成功仍会刷新
     setTimeout(() => {
       if (!done) {
         const c = loadLocCache();
@@ -209,14 +214,28 @@ function getLocation() {
   });
 }
 function ipLocate(resolve) {
-  fetch('https://ipapi.co/json/', { signal: AbortSignal.timeout(5000) })
-    .then(r => r.json())
-    .then(d => {
-      if (d.latitude && d.longitude) {
-        resolve({ lat: d.latitude, lon: d.longitude, accuracy: null, source: 'IP', ipCity: d.city, ipRegion: d.region });
-      } else resolve({ lat: 39.9042, lon: 116.4074, fallback: true, source: 'default' });
-    })
-    .catch(() => resolve({ lat: 39.9042, lon: 116.4074, fallback: true, source: 'default' }));
+  // 多源链式 IP 定位:任一成功即返回,全部失败才用默认值
+  const providers = [
+    { url: 'https://ipapi.co/json/', map: d => d.latitude && d.longitude ? { lat: d.latitude, lon: d.longitude, city: d.city, region: d.region } : null },
+    { url: 'https://ip.userlocationapi.com/json', map: d => d.latitude && d.longitude ? { lat: +d.latitude, lon: +d.longitude, city: d.city, region: d.region } : null },
+    { url: 'https://ipinfo.io/json', map: d => { if (!d.loc) return null; const [la, lo] = d.loc.split(','); return { lat: +la, lon: +lo, city: d.city, region: d.region }; } },
+    { url: 'http://ip-api.com/json/?fields=status,lat,lon,city,regionName', map: d => d.status === 'success' ? { lat: d.lat, lon: d.lon, city: d.city, region: d.regionName } : null }
+  ];
+  (async () => {
+    for (const p of providers) {
+      try {
+        const r = await fetch(p.url, { signal: AbortSignal.timeout(4000) });
+        if (!r.ok) continue;
+        const d = await r.json();
+        const loc = p.map(d);
+        if (loc && isFinite(loc.lat) && isFinite(loc.lon)) {
+          resolve({ lat: loc.lat, lon: loc.lon, accuracy: null, source: 'IP', ipCity: loc.city, ipRegion: loc.region });
+          return;
+        }
+      } catch (e) { /* 尝试下一个源 */ }
+    }
+    resolve({ lat: 39.9042, lon: 116.4074, fallback: true, source: 'default' });
+  })();
 }
 // 持续监听GPS,精度更高时更新位置
 function startWatch(initial) {
@@ -246,6 +265,24 @@ async function reverseGeocode(lat, lon) {
 }
 
 /* ============ 2. 3D 地球 (Three.js) ============ */
+/* 经纬度 → 球面局部坐标(与 SphereGeometry 纹理映射严格一致,
+ * 东经落在纹理东侧,避免红点镜像到地球另一面) */
+function userLocalPos(lat, lon) {
+  const latR = lat * DEG, lonR = lon * DEG;
+  return new THREE.Vector3(
+    Math.cos(latR) * Math.cos(lonR),
+    Math.sin(latR),
+    -Math.cos(latR) * Math.sin(lonR)
+  ).multiplyScalar(1.02);
+}
+/* 旋转地球,使用户位置正对摄像机(+z 方向)
+ * 推导:Ry 先把经度转到 +z 平面(Y = -lon-90°),Rx 再抵消纬度(X = lat) */
+function orientEarthTo(earth, lat, lon) {
+  const latR = lat * DEG, lonR = lon * DEG;
+  earth.rotation.order = 'XYZ';
+  earth.rotation.x = latR;
+  earth.rotation.y = -lonR - Math.PI / 2;
+}
 function initEarth(lat, lon) {
   const canvas = $('earth-canvas');
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
@@ -288,17 +325,15 @@ function initEarth(lat, lon) {
   const starField = new THREE.Points(starGeo, new THREE.PointsMaterial({ color: 0xffffff, size: 0.05, transparent: true, opacity: 0.8 }));
   scene.add(starField);
 
-  // 用户位置标记
-  const latR = lat * DEG, lonR = lon * DEG;
-  const mp = new THREE.Vector3(Math.cos(latR)*Math.cos(lonR), Math.sin(latR), Math.cos(latR)*Math.sin(lonR)).multiplyScalar(1.02);
+  // 用户位置标记(与 SphereGeometry 纹理映射一致:z = -cos(lat)sin(lon))
+  const mp = userLocalPos(lat, lon);
   const marker = new THREE.Mesh(new THREE.SphereGeometry(0.025, 16, 16), new THREE.MeshBasicMaterial({ color: 0xff3344 }));
   marker.position.copy(mp); earth.add(marker);
   const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.25, 8), new THREE.MeshBasicMaterial({ color: 0xff4455, transparent: true, opacity: 0.6 }));
   beam.position.copy(mp.clone().multiplyScalar(1.08));
   beam.lookAt(0, 0, 0); beam.rotateX(Math.PI / 2); earth.add(beam);
 
-  earth.rotation.y = -lonR + Math.PI / 2;
-  earth.rotation.x = latR;
+  orientEarthTo(earth, lat, lon);
 
   // 拖动旋转
   let drag = false, lx = 0, ly = 0, vx = 0, vy = 0;

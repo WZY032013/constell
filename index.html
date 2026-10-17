@@ -7,16 +7,25 @@
 <title>星座观星仪 · StarGaze</title>
 <link rel="preload" as="style" href="style.css">
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="loading.css">
 <link rel="preconnect" href="cdn.jsdelivr.net" crossorigin>
 <link rel="preconnect" href="unpkg.com" crossorigin>
-<link rel="preconnect" href://threejs.org crossorigin>
+<link rel="preconnect" href="//threejs.org" crossorigin>
 </head>
 <body>
 <div id="app">
-  <!-- 加载页 -->
+  <!-- 加载页（启动页 · 真实进度由 loading.js 推进） -->
   <div id="loading">
     <div class="loader-star"></div>
-    <p>正在唤醒星空…</p>
+    <div class="ld-brand">
+      <div class="ld-title">STARGAZE</div>
+      <div class="ld-sub">星座观星仪</div>
+    </div>
+    <div class="ld-track" id="ldTrack"><i id="ldFill"></i></div>
+    <div class="ld-meta">
+      <span id="ldStage">正在唤醒星空…</span>
+      <span id="ldPct" class="num">0%</span>
+    </div>
   </div>
 
   <!-- 地球页 -->
@@ -96,6 +105,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/astronomy-engine@2.1.19/astronomy.browser.min.js" defer></script>
+<script src="loading.js" defer></script>
 <script src="app.js" defer></script>
 </body>
 </html>

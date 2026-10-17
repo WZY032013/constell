@@ -1,0 +1,142 @@
+/* ============================================================
+ * loading.css —— StarGaze加载动效增强
+ * 在既有 #loading 基础上升级：品牌标识 + 真实进度条 + 顶部进度条
+ *
+ * 设计规范落地：
+ *   · 仅动画 transform / opacity；进度用 transform: scaleX + origin:left
+ *   · --lp-ease-out 进入退出 / --lp-ease-in-out 形变 / hover ease 150ms
+ *   · 微交互 120ms / 标准 200ms / 整页 280ms；退出 240ms（快于进入）
+ *   · 入场初始态 scale(0.95)；模糊 ≤ 20px
+ *   · hover 包在 @media (hover: hover) and (pointer: fine)
+ *   · reduced-motion 下循环动画负 delay 暂停在好看的帧
+ * ============================================================ */
+
+:root {
+  --lp-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --lp-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --lp-dur-micro: 120ms;
+  --lp-dur-ui: 200ms;
+  --lp-dur-page: 280ms;
+}
+
+/* ============ 启动页（升级既有 #loading） ============ */
+/* 基础样式沿用 style.css 的 #loading / .loader-star，此处只做增强 */
+#loading {
+  transition: opacity 240ms var(--lp-ease-out), transform 240ms var(--lp-ease-out);
+}
+#loading.hide { opacity: 0; transform: scale(0.96); pointer-events: none; }
+
+/* 品牌区：入场 scale(0.95) → 1 */
+.ld-brand {
+  margin-top: 26px;
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  animation: ldEnter 280ms var(--lp-ease-out) both;
+}
+@keyframes ldEnter {
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
+}
+
+.ld-title {
+  font-size: 15px; font-weight: 700; letter-spacing: .42em; text-indent: .42em;
+  color: #cfe6ff;
+  text-shadow: 0 0 18px rgba(106, 183, 255, .45);
+}
+.ld-sub { font-size: 10.5px; letter-spacing: .24em; color: rgba(140, 170, 220, .6); }
+
+/* 真实进度条：transform: scaleX，不动画 width */
+.ld-track {
+  --p: 0;
+  position: relative;
+  margin-top: 20px;
+  width: min(220px, 56vw);
+  height: 2px;
+  border-radius: 2px;
+  background: rgba(140, 180, 220, .16);
+  overflow: hidden;
+}
+.ld-track > i {
+  position: absolute; inset: 0;
+  border-radius: 2px;
+  transform: scaleX(var(--p)); transform-origin: left center;
+  background: linear-gradient(90deg, rgba(106, 183, 255, .55), #a8d4ff);
+  box-shadow: 0 0 10px rgba(106, 183, 255, .6);
+  transition: transform 200ms var(--lp-ease-out);
+  will-change: transform;
+}
+/* 流动高光：匀速循环，纯 transform 位移，不参与进度计算 */
+.ld-track::after {
+  content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 38px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .8), transparent);
+  will-change: transform;
+  animation: ldShimmer 1.5s linear infinite;
+}
+@keyframes ldShimmer {
+  from { transform: translate3d(-46px, 0, 0); }
+  to   { transform: translate3d(240px, 0, 0); }
+}
+
+/* 阶段文案 + 百分比 */
+.ld-meta {
+  margin-top: 10px;
+  display: flex; align-items: center; gap: 12px;
+  font-size: 11px;
+  color: rgba(140, 180, 220, .75);
+  letter-spacing: .08em;
+}
+.ld-meta .num {
+  font-variant-numeric: tabular-nums;
+  min-width: 34px; text-align: right;
+  color: rgba(168, 212, 255, .9);
+}
+
+/* ============ 顶部进度条 ============ */
+#lpTop {
+  --p: 0;
+  position: fixed; top: 0; left: 0; right: 0;
+  height: 2px; z-index: 90;
+  pointer-events: none;
+  background: rgba(140, 180, 220, .1);
+  opacity: 0;
+  transition: opacity var(--lp-dur-ui) var(--lp-ease-out);
+  will-change: opacity;
+}
+#lpTop.lp-on { opacity: 1; }
+#lpTop > i {
+  position: absolute; inset: 0; display: block;
+  transform: scaleX(var(--p)); transform-origin: left center;
+  background: linear-gradient(90deg, rgba(106, 183, 255, .5), #8fc6ff);
+  box-shadow: 0 0 8px rgba(106, 183, 255, .55);
+  transition: transform 180ms var(--lp-ease-out), opacity 180ms var(--lp-ease-out);
+  will-change: transform;
+}
+/* 头部亮点：与进度条同 duration / 同 easing */
+#lpTop > b {
+  position: absolute; top: 0; left: 0; width: 30px; height: 2px;
+  background: linear-gradient(90deg, transparent, #fff);
+  border-radius: 0 2px 2px 0;
+  transform: translate3d(calc(var(--p) * (100vw - 30px)), 0, 0);
+  transform-origin: left center;
+  opacity: 0.9;
+  transition: transform 180ms var(--lp-ease-out), opacity 180ms var(--lp-ease-out);
+  will-change: transform;
+}
+/* 收尾：冲到 100% 后淡出 */
+#lpTop.lp-done > i,
+#lpTop.lp-done > b { opacity: 0; }
+#lpTop.lp-done { background: transparent; }
+
+/* ============ Hover（仅精确指针设备） ============ */
+@media (hover: hover) and (pointer: fine) {
+  #lpTop:hover { opacity: 1; }
+}
+
+/* ============ 减弱动态 ============ */
+@media (prefers-reduced-motion: reduce) {
+  /* 去 transform / 缩放；循环动画负 delay 停在最亮的一帧；保留 opacity */
+  #loading.hide { transform: none; }
+  .ld-brand { animation: none; opacity: 1; transform: none; }
+  .ld-track::after { animation: none; opacity: 0; }
+  .ld-track > i, #lpTop > i, #lpTop > b { transition-duration: 1ms !important; }
+  #loading, #lpTop { transition-duration: 120ms !important; }
+}

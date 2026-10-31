@@ -909,8 +909,11 @@ function closeLearnPanel() { $('learn-panel').classList.remove('show'); }
 
 /* ============ 8. 流程控制 ============ */
 async function start() {
-  // 立即隐藏加载页
-  $('loading').classList.add('hide');
+  // 关闭加载页：优先交给 loading.js 按真实进度收尾（CDN 脚本就绪 + 地球首帧），
+  // 若动效运行时不可用则退化为原有的直接隐藏，行为与原来一致。
+  if (!(window.LP && window.LP.splash)) {
+    $('loading').classList.add('hide');
+  }
 
   // 先用缓存/默认位置初始化地球,让界面立刻可交互
   const cached = loadLocCache();
